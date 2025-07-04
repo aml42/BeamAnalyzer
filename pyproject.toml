@@ -1,11 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "loadcalculator"
 version = "0.1.0"
-description = "Add your description here"
+description = "A comprehensive beam analysis package for structural engineering calculations"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["structural", "engineering", "beam", "analysis", "deflection", "moment", "shear"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Civil Engineering",
+]
 dependencies = [
     "matplotlib>=3.10.3",
     "numpy>=2.2.6",
     "scipy>=1.15.3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/LoadCalculator"
+Repository = "https://github.com/yourusername/LoadCalculator"
+Documentation = "https://github.com/yourusername/LoadCalculator#readme"
+Issues = "https://github.com/yourusername/LoadCalculator/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/loadcalculator"]
