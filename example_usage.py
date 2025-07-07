@@ -5,8 +5,8 @@ This example demonstrates all the features of the basic_mechanics package throug
 the unified BeamAnalyzer interface.
 """
 import matplotlib.pyplot as plt
-from src.beam_analyzer import BeamAnalyzer
-from src.loads import UniformLoad, TriangularLoad
+from src.loadcalculator.beam_analyzer import BeamAnalyzer
+from src.loadcalculator.loads import UniformLoad, TriangularLoad
 
 
 def example_single_span():
@@ -15,12 +15,13 @@ def example_single_span():
     
     # Define the problem
     support_positions = [0.0, 5.0]  # 5m span
-    loads = [UniformLoad(magnitude=10000, start=0, end=5)]  # 10 kN/m = 10000 N/m uniform load
+    loads = [UniformLoad(magnitude=1, start=0, end=5)]  # 10 kN/m = 10000 N/m uniform load
     
     # Create analyzer (without inertia - no deflection calculation)
     analyzer = BeamAnalyzer(
         support_positions=support_positions,
-        loads=loads
+        loads=loads,
+        inertia=138
     )
     
     # Perform analysis
@@ -31,9 +32,10 @@ def example_single_span():
     print(f"Moments at supports: {results['moments_at_supports']}")
     print(f"Max moments per span: {results['max_moments_per_span']}")
     print(f"Max shear per span: {results['max_shear_per_span']}")
+    print(f"Max deflection per span: {results['max_deflection_per_span']}")
     
     # Plot diagrams
-    fig, (ax1, ax2) = analyzer.plot_all_diagrams()
+    fig, (ax1, ax2, ax3) = analyzer.plot_all_diagrams()
     plt.show()
 
 
@@ -44,17 +46,17 @@ def example_continuous_beam():
     # Define the problem
     support_positions = [0.0, 4.0, 8.0, 12.0]  # 3 spans: 4m, 4m, 4m
     loads = [
-        UniformLoad(magnitude=15000, start=0, end=4),      # 15 kN/m = 15000 N/m on first span
-        TriangularLoad(magnitude_start=0, magnitude_end=20000, start=4, end=8),  # 20 kN/m = 20000 N/m triangular load on second span
-        UniformLoad(magnitude=10000, start=8, end=12)      # 10 kN/m = 10000 N/m on third span
+        UniformLoad(magnitude=15, start=0, end=4),      # 15 kN/m = 15000 N/m on first span
+        TriangularLoad(magnitude_start=0, magnitude_end=20, start=4, end=8),  # 20 kN/m = 20000 N/m triangular load on second span
+        UniformLoad(magnitude=10, start=8, end=12)      # 10 kN/m = 10000 N/m on third span
     ]
     
     # Create analyzer with deflection calculation
     analyzer = BeamAnalyzer(
         support_positions=support_positions,
         loads=loads,
-        inertia=1000,  # 1000 cm⁴
-        e_modulus=210000  # 210 GPa (steel)
+        inertia=138,  # 138 cm⁴
+        e_modulus=210000  # 210 MPa (steel)
     )
     
     # Perform analysis
@@ -77,13 +79,13 @@ def example_get_values():
     print("\n=== Example 3: Getting Specific Values ===")
     
     # Define the problem
-    support_positions = [0.0, 6.0]
-    loads = [UniformLoad(magnitude=12000, start=0, end=6)]  # 12 kN/m = 12000 N/m
+    support_positions = [0.0, 5.0]
+    loads = [UniformLoad(magnitude=1, start=0, end=6)]  # 12 kN/m = 12000 N/m
     
     analyzer = BeamAnalyzer(
         support_positions=support_positions,
         loads=loads,
-        inertia=500
+        inertia=138
     )
     
     # Get values at specific positions
@@ -113,14 +115,14 @@ def example_save_plots():
     # Define the problem
     support_positions = [0.0, 3.0, 7.0]
     loads = [
-        UniformLoad(magnitude=8000, start=0, end=3),  # 8 kN/m = 8000 N/m
-        TriangularLoad(magnitude_start=0, magnitude_end=16000, start=3, end=7)  # 16 kN/m = 16000 N/m
+        UniformLoad(magnitude=8, start=0, end=3),  # 8 kN/m
+        TriangularLoad(magnitude_start=0, magnitude_end=16, start=3, end=7)  # 16 kN/m
     ]
     
     analyzer = BeamAnalyzer(
         support_positions=support_positions,
         loads=loads,
-        inertia=800
+        inertia=138
     )
     
     # Save individual diagrams
@@ -145,16 +147,16 @@ def example_complex_loading():
     # Define a complex beam with multiple spans and loads
     support_positions = [0.0, 2.5, 5.0, 8.0, 11.0]  # 4 spans
     loads = [
-        UniformLoad(magnitude=20000, start=0, end=2.5),           # 20 kN/m = 20000 N/m on first span
-        TriangularLoad(magnitude_start=0, magnitude_end=30000, start=2.5, end=5),  # 30 kN/m = 30000 N/m triangular on second span
-        UniformLoad(magnitude=15000, start=5, end=8),             # 15 kN/m = 15000 N/m on third span
-        TriangularLoad(magnitude_start=25000, magnitude_end=0, start=8, end=11)    # 25 kN/m = 25000 N/m decreasing triangular on fourth span
+        UniformLoad(magnitude=20, start=0, end=2.5),           # 20 kN/m on first span
+        TriangularLoad(magnitude_start=0, magnitude_end=30, start=2.5, end=5),  # 30 kN/m triangular on second span
+        UniformLoad(magnitude=15, start=5, end=8),             # 15 kN/m on third span
+        TriangularLoad(magnitude_start=25, magnitude_end=0, start=8, end=11)    # 25 kN/m decreasing triangular on fourth span
     ]
     
     analyzer = BeamAnalyzer(
         support_positions=support_positions,
         loads=loads,
-        inertia=1500,
+        inertia=138,
         e_modulus=210000
     )
     

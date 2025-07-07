@@ -134,7 +134,7 @@ class DeflectionCalculator:
         """Return the calculated deflection values."""
         if self._deflection is None:
             self._calculate_deflection()
-        return self._deflection
+        return self._deflection * 1000.0
     
     @property
     def slope(self) -> np.ndarray:

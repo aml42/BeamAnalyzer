@@ -230,8 +230,8 @@ class BeamAnalyzer:
         
         max_deflections = []
         for i in range(len(self.support_positions) - 1):
-            start_pos = self.support_positions[i]
-            end_pos = self.support_positions[i + 1]
+            start_pos = self.support_positions[i] * 1000.0  # Convert m to mm
+            end_pos = self.support_positions[i + 1] * 1000.0  # Convert m to mm
             
             # Find indices for this span
             span_mask = (x >= start_pos) & (x <= end_pos)
@@ -244,12 +244,12 @@ class BeamAnalyzer:
             # Find maximum absolute deflection
             max_idx = np.argmax(np.abs(span_deflection))
             max_deflection = span_deflection[max_idx]
-            max_position = span_x[max_idx]
+            max_position = span_x[max_idx] / 1000.0  # Convert mm back to m for output
             
             max_deflections.append({
                 'span_index': i,
-                'span_start': start_pos,
-                'span_end': end_pos,
+                'span_start': self.support_positions[i],  # Keep original m values
+                'span_end': self.support_positions[i + 1],  # Keep original m values
                 'max_deflection': max_deflection,
                 'max_deflection_position': max_position
             })
@@ -334,7 +334,9 @@ class BeamAnalyzer:
         # Add deflection if available
         if self.inertia is not None:
             x_def, deflection_values = self.get_deflection_values()
-            deflection_at_pos = np.interp(position, x_def, deflection_values)
+            # Convert position from m to mm for interpolation
+            position_mm = position * 1000.0
+            deflection_at_pos = np.interp(position_mm, x_def, deflection_values)
             result['deflection'] = deflection_at_pos
         
         return result
