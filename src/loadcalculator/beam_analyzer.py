@@ -135,6 +135,10 @@ class BeamAnalyzer:
         # Get basic results
         reactions = self._reaction_solver.calculate_support_reactions()
         moments_at_supports = self._system_solver.solve_moments()
+
+        # Convert moments_at_supports to float
+        for key, value in moments_at_supports.items():
+            moments_at_supports[key] = float(value)
         
         # Calculate max values per span
         max_moments_per_span = self._get_max_moments_per_span()
