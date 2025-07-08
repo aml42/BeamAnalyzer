@@ -182,8 +182,8 @@ class BeamAnalyzer:
                 'span_index': i,
                 'span_start': start_pos,
                 'span_end': end_pos,
-                'max_moment': max_moment,
-                'max_moment_position': max_position
+                'max_moment': float(max_moment),
+                'max_moment_position': float(max_position)
             })
         
         return max_moments
@@ -214,8 +214,8 @@ class BeamAnalyzer:
                 'span_index': i,
                 'span_start': start_pos,
                 'span_end': end_pos,
-                'max_shear': max_shear_val,
-                'max_shear_position': max_position
+                'max_shear': float(max_shear_val),
+                'max_shear_position': float(max_position)
             })
         
         return max_shear
@@ -250,8 +250,8 @@ class BeamAnalyzer:
                 'span_index': i,
                 'span_start': self.support_positions[i],  # Keep original m values
                 'span_end': self.support_positions[i + 1],  # Keep original m values
-                'max_deflection': max_deflection,
-                'max_deflection_position': max_position
+                'max_deflection': float(max_deflection),
+                'max_deflection_position': float(max_position)
             })
         
         return max_deflections
