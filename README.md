@@ -5,7 +5,7 @@ The `BeamAnalyzer` class provides a unified interface for analyzing continuous b
 ## Quick Start
 
 ```python
-from basic_mechanics import BeamAnalyzer, UniformLoad, TriangularLoad
+from loadcalculator import BeamAnalyzer, UniformLoad, TriangularLoad
 
 # Define your beam
 support_positions = [0.0, 4.0, 8.0]  # Two spans: 4m each
@@ -132,7 +132,7 @@ TriangularLoad(magnitude_start=0, magnitude_end=20000, start=0, end=5)  # 20 kN/
 ### Example 1: Simple Single Span
 
 ```python
-from basic_mechanics import BeamAnalyzer, UniformLoad
+from loadcalculator import BeamAnalyzer, UniformLoad
 
 # Simple beam with uniform load
 analyzer = BeamAnalyzer(
@@ -151,7 +151,7 @@ plt.show()
 ### Example 2: Continuous Beam with Deflection
 
 ```python
-from basic_mechanics import BeamAnalyzer, UniformLoad, TriangularLoad
+from loadcalculator import BeamAnalyzer, UniformLoad, TriangularLoad
 
 # Continuous beam with multiple loads
 analyzer = BeamAnalyzer(
