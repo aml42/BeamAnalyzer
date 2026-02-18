@@ -30,6 +30,14 @@ dependencies = [
     "scipy>=1.15.3",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.uv]
+dev-dependencies = ["pytest>=8.0"]
+
 [project.urls]
 Homepage = "https://github.com/yourusername/LoadCalculator"
 Repository = "https://github.com/yourusername/LoadCalculator"

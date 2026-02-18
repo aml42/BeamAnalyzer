@@ -1,4 +1,4 @@
-from mechanics.basic_mechanics.loads import TriangularLoad, UniformLoad
+from loadcalculator.loads import TriangularLoad, UniformLoad
 import pytest
 
 # Test group 1: Uniform load------------------------------                               

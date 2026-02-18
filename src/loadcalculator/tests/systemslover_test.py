@@ -1,9 +1,9 @@
 import pytest
 import numpy as np
-from mechanics.basic_mechanics.systemsolver import SystemSolver
-from mechanics.basic_mechanics.systembuilder import SystemBuilder
-from mechanics.basic_mechanics.loads import UniformLoad, TriangularLoad
-from mechanics.basic_mechanics.supports import Support
+from loadcalculator.systemsolver import SystemSolver
+from loadcalculator.systembuilder import SystemBuilder
+from loadcalculator.loads import UniformLoad, TriangularLoad
+from loadcalculator.supports import Support
 
 # Test group 1: Basic system solver https://mathalino.com/reviewer/strength-materials/problem-813-continuous-beam-three-moment-equation
 

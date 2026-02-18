@@ -1,6 +1,6 @@
-from mechanics.basic_mechanics.systembuilder import SystemBuilder
-from mechanics.basic_mechanics.loads import UniformLoad, TriangularLoad
-from mechanics.basic_mechanics.supports import Support
+from loadcalculator.systembuilder import SystemBuilder
+from loadcalculator.loads import UniformLoad, TriangularLoad
+from loadcalculator.supports import Support
 import pytest
 
 # Test group 1: Subsystem creation------------------------------
