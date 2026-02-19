@@ -4,11 +4,11 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from reactionsolver import ReactionSolver
-from systemsolver import SystemSolver
-from systembuilder import SystemBuilder
-from loads import UniformLoad, TriangularLoad
-from supports import Support
+from loadcalculator.reactionsolver import ReactionSolver
+from loadcalculator.systemsolver import SystemSolver
+from loadcalculator.systembuilder import SystemBuilder
+from loadcalculator.loads import UniformLoad, TriangularLoad
+from loadcalculator.supports import Support
 
 def test_basic_reaction_solver_triangular_load_3_support():
     """Test ReactionSolver with a simple triangular load case"""

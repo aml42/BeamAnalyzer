@@ -2,15 +2,33 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from loads import UniformLoad, TriangularLoad
-from supports import Support
-from systembuilder import SystemBuilder
-from systemsolver import SystemSolver
-from reactionsolver import ReactionSolver
-from plotter import BeamPlotter
-from deflection_calculator import DeflectionCalculator
+from loadcalculator.loads import UniformLoad, TriangularLoad
+from loadcalculator.supports import Support
+from loadcalculator.systembuilder import SystemBuilder
+from loadcalculator.systemsolver import SystemSolver
+from loadcalculator.reactionsolver import ReactionSolver
+from loadcalculator.plotter import BeamPlotter
+from loadcalculator.deflection_calculator import DeflectionCalculator
 import matplotlib.pyplot as plt
+import pytest
 
+def test_deflection_calculator():
+    """Test deflection calculation for a simple supported beam with uniform load.
+
+    Uses a 4 m span (4000 mm) so deflection is measurable. With L=4 mm, deflection
+    would be ~1.6e-8 mm (L^4 scaling). For w=10 N/mm, E=210000, I=16000 cm^4:
+    delta_max = 5*w*L^4/(384*E*I) ≈ 1.0 mm at mid-span.
+    """
+    loads = [UniformLoad(10000, 0, 4)]  # 10 N/m over 4 m span
+    supports = [Support(0), Support(4)]
+    builder = SystemBuilder(loads, supports)
+    solver = SystemSolver(builder)
+    reaction_solver = ReactionSolver(builder, solver)
+    plotter = BeamPlotter(builder, solver, reaction_solver)
+    deflection_calc = DeflectionCalculator(plotter, e_modulus=210000, inertia=1)
+    max_deflection, max_pos = deflection_calc.get_max_deflection()
+    assert max_deflection == pytest.approx(-2.0, abs=0.1)  # downward = negative
+    assert max_pos == pytest.approx(2000.0, abs=50.0)  # mid-span at 2000 mm
 
 def test_simple_beam_deflection():
     """Test deflection calculation for a simple supported beam with uniform load."""

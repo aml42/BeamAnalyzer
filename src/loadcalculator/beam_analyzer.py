@@ -63,7 +63,7 @@ class BeamAnalyzer:
         self,
         support_positions: List[float],
         loads: List[Union[UniformLoad, TriangularLoad]],
-        inertia: Optional[float] = None,
+        inertia: float | None = None,
         e_modulus: float = 210000,
         num_points: int = 2000
     ):

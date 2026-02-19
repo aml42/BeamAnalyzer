@@ -624,20 +624,16 @@ class DeflectionCalculatorSI:
 
 
 if __name__ == "__main__":
-    # Example usage with SI units (N/m, m)
-    from loads import UniformLoad
-    from supports import Support
-    
     # Create loads in N/m and positions in m
-    loads = [UniformLoad(3480, 0, 4.5)]  # 3480 N/m uniform load from 0 to 4.5 m
-    support_positions = [0, 1.5, 3.0, 4.5]  # Supports at 0, 1.5, 3.0, and 4.5 meters
+    loads = [UniformLoad(19750, 0, 12)]  # 3480 N/m uniform load from 0 to 4.5 m
+    support_positions = [0, 3.0, 6.0, 9.0, 12.0]  # Supports at 0, 1.5, 3.0, and 4.5 meters
     
     # Use the SI version of the deflection calculator
     deflection_calc = DeflectionCalculatorSI(
         loads=loads,
         support_positions=support_positions,
         e_modulus=210000,
-        inertia=75.1
+        inertia=3265
     )
     
     # Get maximum deflection

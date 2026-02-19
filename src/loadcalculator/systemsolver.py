@@ -28,6 +28,8 @@ class SystemSolver:
     - A1*a1, A2*b2 are load components from left and right spans
     
     For single span systems (2 supports), all moments are zero (simply supported).
+
+    The moments are returned in Nm.
     """
     
     def __init__(self, system_builder: SystemBuilder):
@@ -209,6 +211,7 @@ if __name__ == "__main__":
     print("Load vector shape:", info['load_vector'].shape)
     
     moments = solver.solve_moments()
+    print(moments)
     print("\nSolved moments:")
     for pos, moment in moments.items():
         print(f"Support at {pos}: {moment:.2f}")

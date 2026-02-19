@@ -127,6 +127,7 @@ class BeamPlotter:
             shear += reaction * (self._x >= pos)
 
         self._shear = shear
+        print(len(self._shear))
 
         # ------------------------------------------------------------------
         # Bending moment M(x): integrate shear V(x)
@@ -170,7 +171,7 @@ class BeamPlotter:
             moment[span_mask] = span_moment
 
         self._moment = moment
-
+        print(len(self._moment))
     # ------------------------------------------------------------------
     # Internal helper for span shading
     # ------------------------------------------------------------------
@@ -260,7 +261,7 @@ class BeamPlotter:
         ax.plot(self._x, self._shear, **default_kwargs)
         ax.set_title("Shear Force Diagram")
         ax.set_xlabel("Position [m]")
-        ax.set_ylabel("Shear V(x) [kN]")
+        ax.set_ylabel("Shear V(x) [N]")
         ax.axhline(0, color="black", linewidth=0.8, alpha=0.3)
         ax.grid(True, alpha=0.3)
         ax.legend()
@@ -289,7 +290,7 @@ class BeamPlotter:
         ax.plot(self._x, self._moment, **default_kwargs)
         ax.set_title("Bending Moment Diagram")
         ax.set_xlabel("Position [m]")
-        ax.set_ylabel("Moment M(x) [kN·m]")
+        ax.set_ylabel("Moment M(x) [N·m]")
         ax.axhline(0, color="black", linewidth=0.8, alpha=0.3)
         ax.grid(True, alpha=0.3)
         ax.legend()
@@ -321,10 +322,12 @@ if __name__ == "__main__":
     ld = [
         TriangularLoad(0, 1400,1, 10),
     ]
-    from supports import Support
+    from loadcalculator.supports import Support
     sp = [Support(0), Support(3), Support(4), Support(12)]
-
+    
     builder = SystemBuilder(ld, sp)
     plotter = BeamPlotter(builder)
+    moments = plotter._ensure_fields()
+    print(moments)
     plotter.plot_all()
     plt.show() 
