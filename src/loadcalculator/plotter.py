@@ -127,7 +127,6 @@ class BeamPlotter:
             shear += reaction * (self._x >= pos)
 
         self._shear = shear
-        print(len(self._shear))
 
         # ------------------------------------------------------------------
         # Bending moment M(x): integrate shear V(x)
