@@ -170,7 +170,6 @@ class BeamPlotter:
             moment[span_mask] = span_moment
 
         self._moment = moment
-        print(len(self._moment))
     # ------------------------------------------------------------------
     # Internal helper for span shading
     # ------------------------------------------------------------------
