@@ -1,238 +1,187 @@
-# BeamAnalyzer - Main Interface for Beam Analysis
+# BeamAnalyzer - Continuous Beam Analysis
 
-The `BeamAnalyzer` class provides a unified interface for analyzing continuous beams with the `basic_mechanics` package. It combines all the functionality into a single, easy-to-use class that uses SI units throughout.
+The `BeamAnalyzer` class provides a unified interface for analyzing continuous beams. It calculates support reactions, shear forces, bending moments, and deflections using the three-moment equation (Clapeyron's theorem).
 
 ## Quick Start
 
 ```python
 from loadcalculator import BeamAnalyzer, UniformLoad, TriangularLoad
 
-# Define your beam
-support_positions = [0.0, 4.0, 8.0]  # Two spans: 4m each
-loads = [
-    UniformLoad(magnitude=10000, start=0, end=4),      # 10 kN/m = 10000 N/m on first span
-    TriangularLoad(magnitude_start=0, magnitude_end=20000, start=4, end=8)  # 20 kN/m = 20000 N/m triangular on second span
-]
-
-# Create analyzer
 analyzer = BeamAnalyzer(
-    support_positions=support_positions,
-    loads=loads,
-    inertia=1000,  # Optional: for deflection calculation
-    e_modulus=210000  # Optional: default is steel
+    support_positions=[0.0, 4.0, 8.0],
+    loads=[
+        UniformLoad(magnitude=10000, start=0, end=4),
+        TriangularLoad(magnitude_start=0, magnitude_end=20000, start=4, end=8),
+    ],
+    inertia=138e-8,       # m⁴ (for deflection calculation)
+    e_modulus=2.1e11,     # Pa (steel)
 )
 
-# Perform analysis
 results = analyzer.analyze()
+print(results['reactions'])
+print(results['max_moments_per_span'])
+```
 
-# Access results
-print(f"Reactions: {results['reactions']}")
-print(f"Max moments: {results['max_moments_per_span']}")
+## Installation
+
+```bash
+uv sync
 ```
 
 ## Input Parameters
 
-### Required Parameters
+### Required
 
-- **`support_positions`** (List[float]): List of support positions along the beam axis in meters
-- **`loads`** (List[UniformLoad | TriangularLoad]): List of load objects with magnitudes in N/m
+| Parameter | Description |
+|---|---|
+| `support_positions` | Support positions along the beam axis |
+| `loads` | List of `UniformLoad` and/or `TriangularLoad` objects |
 
-### Optional Parameters
+### Optional
 
-- **`inertia`** (float, optional): Moment of inertia in cm⁴. If not provided, deflection calculations are skipped
-- **`e_modulus`** (float, default=210000): Elastic modulus in N/mm² (default is typical for steel)
-- **`num_points`** (int, default=2000): Number of evaluation points for calculations and plotting
+| Parameter | Default | Description |
+|---|---|---|
+| `inertia` | `None` | Moment of inertia. If `None`, deflection is skipped |
+| `e_modulus` | `2.1e11` | Elastic modulus (default: steel in Pa) |
+| `num_points` | `2000` | Number of evaluation points |
+
+### Input Units
+
+By default all inputs are in SI (m, N/m, Pa, m⁴). You can change this with input unit enums:
+
+| Parameter | Default | Options |
+|---|---|---|
+| `position_unit` | `LengthUnit.m` | `m`, `dm`, `cm`, `mm` |
+| `load_unit` | `ForcePerLengthUnit.N_per_m` | `N_per_m`, `kN_per_m`, `N_per_mm` |
+| `e_modulus_unit` | `PressureUnit.Pa` | `Pa`, `kPa`, `MPa`, `GPa` |
+| `inertia_unit` | `InertiaUnit.m4` | `m4`, `dm4`, `cm4`, `mm4` |
+
+All inputs are converted to SI internally before computation.
+
+```python
+from loadcalculator import (
+    BeamAnalyzer, UniformLoad,
+    LengthUnit, ForcePerLengthUnit, PressureUnit, InertiaUnit,
+)
+
+analyzer = BeamAnalyzer(
+    support_positions=[0, 3000, 6000, 9000, 12000],
+    loads=[UniformLoad(magnitude=19.575, start=0, end=12000)],
+    inertia=3265,
+    e_modulus=210000,
+    position_unit=LengthUnit.mm,
+    load_unit=ForcePerLengthUnit.kN_per_m,
+    e_modulus_unit=PressureUnit.MPa,
+    inertia_unit=InertiaUnit.cm4,
+)
+```
+
+### Output Units
+
+Output units for results and plots are also configurable:
+
+| Parameter | Default | Options |
+|---|---|---|
+| `shear_unit` | `ShearUnit.N` | `N`, `kN` |
+| `moment_unit` | `MomentUnit.Nm` | `Nm`, `kNm`, `Nmm` |
+| `deflection_unit` | `DeflectionUnit.m` | `m`, `dm`, `cm`, `mm` |
+
+These affect `analyze()` results, `get_value_at_position()`, data retrieval methods, and plot axis labels.
+
+```python
+from loadcalculator import BeamAnalyzer, UniformLoad, ShearUnit, MomentUnit, DeflectionUnit
+
+analyzer = BeamAnalyzer(
+    support_positions=[0.0, 3.0, 6.0],
+    loads=[UniformLoad(magnitude=10000, start=0, end=6)],
+    inertia=138e-8,
+    shear_unit=ShearUnit.kN,
+    moment_unit=MomentUnit.kNm,
+    deflection_unit=DeflectionUnit.mm,
+)
+
+results = analyzer.analyze()
+# results['reactions'] in kN, moments in kN·m, deflections in mm
+```
 
 ## Output Structure
 
-The `analyze()` method returns a dictionary containing:
+`analyze()` returns a dictionary:
 
 ```python
 {
-    'reactions': {support_position: reaction_force},
-    'moments_at_supports': {support_position: moment_value},
+    'reactions': {0.0: 25.0, 4.0: 50.0, 8.0: 25.0},
+    'moments_at_supports': {0.0: 0.0, 4.0: -20000.0, 8.0: 0.0},
     'max_moments_per_span': [
-        {
-            'span_index': 0,
-            'span_start': 0.0,
-            'span_end': 4.0,
-            'max_moment': 20000.0,
-            'max_moment_position': 2.0
-        },
-        # ... one entry per span
+        {'span_index': 0, 'span_start': 0.0, 'span_end': 4.0,
+         'max_moment': 20000.0, 'max_moment_position': 2.0},
+        ...
     ],
     'max_shear_per_span': [
-        {
-            'span_index': 0,
-            'span_start': 0.0,
-            'span_end': 4.0,
-            'max_shear': 15000.0,
-            'max_shear_position': 0.0
-        },
-        # ... one entry per span
+        {'span_index': 0, 'span_start': 0.0, 'span_end': 4.0,
+         'max_shear': 15000.0, 'max_shear_position': 0.0},
+        ...
     ],
-    'max_deflection_per_span': [  # Only if inertia is provided
-        {
-            'span_index': 0,
-            'span_start': 0.0,
-            'span_end': 4.0,
-            'max_deflection': 0.0123,
-            'max_deflection_position': 2.0
-        },
-        # ... one entry per span
-    ]
+    'max_deflection_per_span': [  # only if inertia is provided
+        {'span_index': 0, 'span_start': 0.0, 'span_end': 4.0,
+         'max_deflection': -0.0123, 'max_deflection_position': 2.0},
+        ...
+    ],
 }
 ```
 
-## Available Methods
+## Methods
 
-### Analysis Methods
+### Analysis
 
-- **`analyze()`**: Perform complete beam analysis and return all results
-- **`get_value_at_position(position)`**: Get shear, moment, and deflection at a specific position
+- **`analyze()`** — Full analysis, returns results dict
+- **`get_value_at_position(position)`** — Shear, moment, and deflection at a specific position
 
-### Data Retrieval Methods
+### Data Retrieval
 
-- **`get_shear_values()`**: Returns (x_coordinates, shear_values) arrays
-- **`get_moment_values()`**: Returns (x_coordinates, moment_values) arrays
-- **`get_deflection_values()`**: Returns (x_coordinates, deflection_values) arrays (requires inertia)
+- **`get_shear_values()`** — `(x_array, shear_array)`
+- **`get_moment_values()`** — `(x_array, moment_array)`
+- **`get_deflection_values()`** — `(x_array, deflection_array)` (requires inertia)
 
-### Plotting Methods
+### Plotting
 
-- **`plot_shear_diagram(save_path=None, **kwargs)`**: Plot shear force diagram
-- **`plot_moment_diagram(save_path=None, **kwargs)`**: Plot bending moment diagram
-- **`plot_deflection_diagram(save_path=None, **kwargs)`**: Plot deflection diagram (requires inertia)
-- **`plot_all_diagrams(save_path=None, figsize=(15, 10))`**: Plot all diagrams in one figure
+All plot methods accept an optional `unit` parameter to override the analyzer default.
+
+- **`plot_shear_diagram(save_path=None, unit=None)`**
+- **`plot_moment_diagram(save_path=None, unit=None)`**
+- **`plot_deflection_diagram(save_path=None, unit=None)`** (requires inertia)
+- **`plot_all_diagrams(save_path=None, figsize=(15, 10), shear_unit=None, moment_unit=None, deflection_unit=None)`** — Moment, shear, and deflection in one figure
 
 ## Load Types
 
 ### UniformLoad
 
 ```python
-UniformLoad(magnitude=10000, start=0, end=5)  # 10 kN/m = 10000 N/m
+UniformLoad(magnitude=10000, start=0, end=5)
 ```
 
-- **`magnitude`**: Load intensity in N/m
-- **`start`**: Start position of the load in meters
-- **`end`**: End position of the load in meters
+- `magnitude` — load intensity (in `load_unit`)
+- `start` / `end` — position range (in `position_unit`)
 
 ### TriangularLoad
 
 ```python
-TriangularLoad(magnitude_start=0, magnitude_end=20000, start=0, end=5)  # 20 kN/m = 20000 N/m
+TriangularLoad(magnitude_start=0, magnitude_end=20000, start=0, end=5)
 ```
 
-- **`magnitude_start`**: Load intensity at start position in N/m
-- **`magnitude_end`**: Load intensity at end position in N/m
-- **`start`**: Start position of the load in meters
-- **`end`**: End position of the load in meters
+- `magnitude_start` / `magnitude_end` — load intensity at start/end (in `load_unit`)
+- `start` / `end` — position range (in `position_unit`)
 
-## Examples
+## Running Tests
 
-### Example 1: Simple Single Span
-
-```python
-from loadcalculator import BeamAnalyzer, UniformLoad
-
-# Simple beam with uniform load
-analyzer = BeamAnalyzer(
-    support_positions=[0.0, 5.0],
-    loads=[UniformLoad(magnitude=10000, start=0, end=5)]  # 10 kN/m = 10000 N/m
-)
-
-results = analyzer.analyze()
-print(f"Reactions: {results['reactions']}")
-
-# Plot diagrams
-analyzer.plot_all_diagrams()
-plt.show()
+```bash
+uv run pytest
+uv run pytest tests/beam_analyzer_test.py -v  # single file
 ```
-
-### Example 2: Continuous Beam with Deflection
-
-```python
-from loadcalculator import BeamAnalyzer, UniformLoad, TriangularLoad
-
-# Continuous beam with multiple loads
-analyzer = BeamAnalyzer(
-    support_positions=[0.0, 4.0, 8.0, 12.0],
-    loads=[
-        UniformLoad(magnitude=15000, start=0, end=4),      # 15 kN/m = 15000 N/m
-        TriangularLoad(magnitude_start=0, magnitude_end=20000, start=4, end=8),  # 20 kN/m = 20000 N/m
-        UniformLoad(magnitude=10000, start=8, end=12)      # 10 kN/m = 10000 N/m
-    ],
-    inertia=1000,  # Enable deflection calculation
-    e_modulus=210000
-)
-
-results = analyzer.analyze()
-
-# Get values at specific position
-values = analyzer.get_value_at_position(6.0)
-print(f"At x=6m: Shear={values['shear']:.2f} N, Moment={values['moment']:.2f} Nm")
-
-# Save plots
-analyzer.plot_all_diagrams(save_path="beam_analysis.png")
-```
-
-### Example 3: Getting Data Arrays
-
-```python
-# Get all values for custom plotting
-x_coords, shear_values = analyzer.get_shear_values()
-_, moment_values = analyzer.get_moment_values()
-_, deflection_values = analyzer.get_deflection_values()
-
-# Custom plotting
-plt.figure(figsize=(15, 5))
-plt.subplot(1, 3, 1)
-plt.plot(x_coords, shear_values)
-plt.title('Shear Force')
-plt.grid(True)
-
-plt.subplot(1, 3, 2)
-plt.plot(x_coords, moment_values)
-plt.title('Bending Moment')
-plt.grid(True)
-
-plt.subplot(1, 3, 3)
-plt.plot(x_coords, deflection_values)
-plt.title('Deflection')
-plt.grid(True)
-
-plt.tight_layout()
-plt.show()
-```
-
-## Units
-
-- **Positions**: meters (m)
-- **Loads**: newtons per meter (N/m)
-- **Reactions**: newtons (N)
-- **Moments**: newton-meters (Nm)
-- **Inertia**: centimeters to the fourth power (cm⁴)
-- **E-modulus**: newtons per square millimeter (N/mm²)
-- **Deflection**: millimeters (mm)
 
 ## Notes
 
-1. **Deflection Calculation**: Deflection is only calculated if the `inertia` parameter is provided
-2. **Support Moments**: End supports always have zero moment (simply supported)
-3. **Coordinate System**: Positive shear is upward, positive moment causes tension on the bottom fiber
-4. **Deflection Sign**: Positive deflection is downward (following load direction)
-5. **SI Units**: All inputs use SI units, with internal conversions handled automatically for deflection calculations
-
-## Error Handling
-
-The analyzer will raise appropriate errors for:
-- Insufficient support positions (< 2)
-- No loads provided
-- Invalid load parameters
-- Missing inertia when deflection methods are called
-- Numerical issues in solving the system
-
-## Performance
-
-- Analysis is performed once and cached for subsequent method calls
-- Plotting methods reuse the cached analysis results
-- Large numbers of evaluation points may slow down initial analysis but improve plot quality
+- Deflection is only calculated when `inertia` is provided
+- End supports always have zero moment (simply supported)
+- Positive shear is upward; negative deflection is downward
+- Analysis is computed once and cached — subsequent calls reuse results
