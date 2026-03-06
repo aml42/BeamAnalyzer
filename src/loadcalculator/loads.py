@@ -1,6 +1,4 @@
-import numpy as np
 from scipy.integrate import quad # type: ignore
-import math as m
 
 
 class LoadFunctions:
@@ -118,25 +116,3 @@ class UniformLoad(LoadFunctions):
 
     def load_function(self, x):
         return self.magnitude
-
-
-# class PunctualLoad:
-#     def __init__(self, magnitude: float, position: float, effective_width: float = None):
-#         if not effective_width:
-#             self.magnitude = magnitude
-#         else:
-#             self.magnitude = magnitude / effective_width
-#         self.position = position
-
-#     def load_components_left_span(self,span: float):
-#         return (self.magnitude*(self.position)/span * (span**2 -self.position**2))
-    
-#     def load_components_right_span(self,span: float):
-#         return (self.magnitude*(span-self.position)/span * (span**2 -(span-self.position)**2))
-
-
-
-
-
-
-

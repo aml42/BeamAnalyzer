@@ -15,13 +15,13 @@ def example_single_span():
     
     # Define the problem
     support_positions = [0.0, 5.0]  # 5m span
-    loads = [UniformLoad(magnitude=1, start=0, end=5)]  # 10 kN/m = 10000 N/m uniform load
+    loads = [UniformLoad(magnitude=10000, start=0, end=5)]  # 10 kN/m = 10000 N/m uniform load
     
     # Create analyzer (without inertia - no deflection calculation)
     analyzer = BeamAnalyzer(
         support_positions=support_positions,
         loads=loads,
-        inertia=138
+        inertia=138e-8
     )
     
     # Perform analysis
@@ -46,17 +46,17 @@ def example_continuous_beam():
     # Define the problem
     support_positions = [0.0, 4.0, 8.0, 12.0]  # 3 spans: 4m, 4m, 4m
     loads = [
-        UniformLoad(magnitude=15, start=0, end=4),      # 15 kN/m = 15000 N/m on first span
+        UniformLoad(magnitude=15e3, start=0, end=4),      # 15 kN/m = 15000 N/m on first span
         TriangularLoad(magnitude_start=0, magnitude_end=20, start=4, end=8),  # 20 kN/m = 20000 N/m triangular load on second span
-        UniformLoad(magnitude=10, start=8, end=12)      # 10 kN/m = 10000 N/m on third span
+        UniformLoad(magnitude=10e3, start=8, end=12)      # 10 kN/m = 10000 N/m on third span
     ]
     
     # Create analyzer with deflection calculation
     analyzer = BeamAnalyzer(
         support_positions=support_positions,
         loads=loads,
-        inertia=138,  # 138 cm⁴
-        e_modulus=210000  # 210 MPa (steel)
+        inertia=138e-8,  # 138 cm⁴
+        e_modulus=2.1e11  # 210 GPa (steel)
     )
     
     # Perform analysis
@@ -80,12 +80,12 @@ def example_get_values():
     
     # Define the problem
     support_positions = [0.0, 5.0]
-    loads = [UniformLoad(magnitude=1, start=0, end=6)]  # 12 kN/m = 12000 N/m
+    loads = [UniformLoad(magnitude=12e3, start=0, end=6)]  # 12 kN/m = 12000 N/m
     
     analyzer = BeamAnalyzer(
         support_positions=support_positions,
         loads=loads,
-        inertia=138
+        inertia=138e-8
     )
     
     # Get values at specific positions
@@ -115,14 +115,14 @@ def example_save_plots():
     # Define the problem
     support_positions = [0.0, 3.0, 7.0]
     loads = [
-        UniformLoad(magnitude=8, start=0, end=3),  # 8 kN/m
-        TriangularLoad(magnitude_start=0, magnitude_end=16, start=3, end=7)  # 16 kN/m
+        UniformLoad(magnitude=8e3, start=0, end=3),  # 8 kN/m
+        TriangularLoad(magnitude_start=0, magnitude_end=16e3, start=3, end=7)  # 16 kN/m
     ]
     
     analyzer = BeamAnalyzer(
         support_positions=support_positions,
         loads=loads,
-        inertia=138
+        inertia=138e-8
     )
     
     # Save individual diagrams
@@ -147,17 +147,17 @@ def example_complex_loading():
     # Define a complex beam with multiple spans and loads
     support_positions = [0.0, 2.5, 5.0, 8.0, 11.0]  # 4 spans
     loads = [
-        UniformLoad(magnitude=20, start=0, end=2.5),           # 20 kN/m on first span
-        TriangularLoad(magnitude_start=0, magnitude_end=30, start=2.5, end=5),  # 30 kN/m triangular on second span
-        UniformLoad(magnitude=15, start=5, end=8),             # 15 kN/m on third span
-        TriangularLoad(magnitude_start=25, magnitude_end=0, start=8, end=11)    # 25 kN/m decreasing triangular on fourth span
+        UniformLoad(magnitude=20e3, start=0, end=2.5),           # 20 kN/m on first span
+        TriangularLoad(magnitude_start=0, magnitude_end=30e3, start=2.5, end=5),  # 30 kN/m triangular on second span
+        UniformLoad(magnitude=15e3, start=5, end=8),             # 15 kN/m on third span
+        TriangularLoad(magnitude_start=25e3, magnitude_end=0, start=8, end=11)    # 25 kN/m decreasing triangular on fourth span
     ]
     
     analyzer = BeamAnalyzer(
         support_positions=support_positions,
         loads=loads,
-        inertia=138,
-        e_modulus=210000
+        inertia=138e-8,
+        e_modulus=2.1e11
     )
     
     # Perform analysis

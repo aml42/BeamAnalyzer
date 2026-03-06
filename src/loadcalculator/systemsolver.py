@@ -1,18 +1,8 @@
 import numpy as np
-from typing import Dict, List, Tuple
 
-try:
-    from .systembuilder import SystemBuilder
-    from .loads import TriangularLoad, UniformLoad
-    from .supports import Support
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    from systembuilder import SystemBuilder
-    from loads import TriangularLoad, UniformLoad
-    from supports import Support
+from .systembuilder import SystemBuilder
+from .loads import TriangularLoad, UniformLoad
+from .supports import Support
 
 
 class SystemSolver:
@@ -49,7 +39,7 @@ class SystemSolver:
         self.num_internal_supports = len(self.support_positions) - 2
         self.num_equations = len(self.subsystems)
         
-    def _get_span_length(self, span_tuple: Tuple[float, float]) -> float:
+    def _get_span_length(self, span_tuple: tuple[float, float]) -> float:
         """Get the length of a span given its start and end positions."""
         return span_tuple[1] - span_tuple[0]
     
@@ -120,14 +110,14 @@ class SystemSolver:
             
         return load_vector
     
-    def solve_moments(self) -> Dict[float, float]:
+    def solve_moments(self) -> dict[float, float]:
         """
         Solve the three-moment equation system to find internal support moments.
         
         For single span systems, all moments are zero (simply supported).
         
         Returns:
-            Dictionary mapping support position to moment value
+            dictionary mapping support position to moment value
         """
         if self.is_single_span:
             # For single span, all moments are zero (simply supported)
@@ -160,12 +150,12 @@ class SystemSolver:
             
         return result
     
-    def get_equation_system_info(self) -> Dict:
+    def get_equation_system_info(self) -> dict:
         """
         Get detailed information about the equation system for debugging/analysis.
         
         Returns:
-            Dictionary containing coefficient matrix, load vector, and subsystem info
+            dictionary containing coefficient matrix, load vector, and subsystem info
         """
         if self.is_single_span:
             return {

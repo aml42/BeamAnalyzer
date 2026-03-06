@@ -1,13 +1,6 @@
-try:
-    from .loads import TriangularLoad, UniformLoad
-    from .supports import Support
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    from loads import TriangularLoad, UniformLoad
-    from supports import Support
+from .loads import TriangularLoad, UniformLoad
+from .supports import Support
+
 
 
 class SystemBuilder:

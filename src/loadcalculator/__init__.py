@@ -4,7 +4,7 @@ from .systembuilder import SystemBuilder
 from .systemsolver import SystemSolver
 from .reactionsolver import ReactionSolver
 from .plotter import BeamPlotter
-from .deflection_calculator import DeflectionCalculator, DeflectionCalculatorSI
+from .deflection_calculator import DeflectionCalculator
 from .beam_analyzer import BeamAnalyzer
 
 __all__ = [
@@ -16,7 +16,6 @@ __all__ = [
     'ReactionSolver',
     'BeamPlotter',
     'DeflectionCalculator',
-    'DeflectionCalculatorSI',
     'BeamAnalyzer'
 ]
 

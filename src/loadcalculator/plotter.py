@@ -1,18 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Optional, Tuple
 
-try:
-    from .systembuilder import SystemBuilder
-    from .systemsolver import SystemSolver
-    from .reactionsolver import ReactionSolver
-    from .loads import UniformLoad, TriangularLoad
-except ImportError:
-    # Support direct execution when the package import fails
-    from systembuilder import SystemBuilder
-    from systemsolver import SystemSolver
-    from reactionsolver import ReactionSolver
-    from loads import UniformLoad, TriangularLoad
+
+from .systembuilder import SystemBuilder
+from .systemsolver import SystemSolver
+from .reactionsolver import ReactionSolver
+from .loads import UniformLoad, TriangularLoad
 
 
 class BeamPlotter:
@@ -39,8 +32,8 @@ class BeamPlotter:
     def __init__(
         self,
         system_builder: SystemBuilder,
-        system_solver: Optional[SystemSolver] = None,
-        reaction_solver: Optional[ReactionSolver] = None,
+        system_solver: SystemSolver | None = None,
+        reaction_solver: ReactionSolver | None = None,
         num_points: int = 2000,
     ) -> None:
         self.builder = system_builder
@@ -63,7 +56,7 @@ class BeamPlotter:
     # ------------------------------------------------------------------
 
     @property
-    def support_positions(self) -> Tuple[float, ...]:
+    def support_positions(self) -> tuple[float, ...]:
         return self.builder.support_positions
 
     @property
@@ -177,7 +170,7 @@ class BeamPlotter:
     def _add_span_background(
         self,
         ax: "plt.Axes",
-        colors: Tuple[str, str] = ("lightblue", "lightgreen"),  # Updated colors
+        colors: tuple[str, str] = ("lightblue", "lightgreen"),  # Updated colors
         alpha: float = 0.2,
     ) -> None:
         """Tint the background of *ax* to highlight individual spans.
@@ -241,7 +234,7 @@ class BeamPlotter:
     # Plotting interface
     # ------------------------------------------------------------------
 
-    def plot_shear(self, ax: Optional[plt.Axes] = None, **kwargs) -> plt.Axes:
+    def plot_shear(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:
         """Plot the shear-force diagram and return the Matplotlib ``Axes``."""
         self._ensure_fields()
         if ax is None:
@@ -270,7 +263,7 @@ class BeamPlotter:
         
         return ax
 
-    def plot_moment(self, ax: Optional[plt.Axes] = None, **kwargs) -> plt.Axes:
+    def plot_moment(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:
         """Plot the bending-moment diagram and return the Matplotlib ``Axes``."""
         self._ensure_fields()
         if ax is None:
@@ -299,7 +292,7 @@ class BeamPlotter:
         
         return ax
 
-    def plot_all(self, figsize=(10, 6)) -> Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]:
+    def plot_all(self, figsize=(10, 6)) -> tuple[plt.Figure, tuple[plt.Axes, plt.Axes]]:
         """Convenience wrapper that plots shear and moment diagrams stacked
         vertically and returns the Matplotlib ``Figure`` together with both
         axes.

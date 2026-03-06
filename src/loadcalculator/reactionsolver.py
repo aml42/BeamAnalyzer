@@ -1,20 +1,7 @@
-import numpy as np
-from typing import Dict, List, Tuple
-
-try:
-    from .systembuilder import SystemBuilder
-    from .systemsolver import SystemSolver
-    from .loads import TriangularLoad, UniformLoad
-    from .supports import Support
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    from systembuilder import SystemBuilder
-    from systemsolver import SystemSolver
-    from loads import TriangularLoad, UniformLoad
-    from supports import Support
+from .systembuilder import SystemBuilder
+from .systemsolver import SystemSolver
+from .loads import TriangularLoad, UniformLoad
+from .supports import Support
 
 
 class ReactionSolver:
@@ -44,7 +31,7 @@ class ReactionSolver:
         # Get solved moments from SystemSolver
         self.support_moments = system_solver.solve_moments()
         
-    def _get_span_info(self, span_index: int) -> Tuple[float, float, float]:
+    def _get_span_info(self, span_index: int) -> tuple[float, float, float]:
         """
         Get span information including length and end positions.
         
@@ -52,14 +39,14 @@ class ReactionSolver:
             span_index: Index of the span (0-based)
             
         Returns:
-            Tuple of (span_start, span_end, span_length)
+            tuple of (span_start, span_end, span_length)
         """
         span_start = self.support_positions[span_index]
         span_end = self.support_positions[span_index + 1]
         span_length = span_end - span_start
         return span_start, span_end, span_length
     
-    def _get_loads_on_span(self, span_start: float, span_end: float) -> List:
+    def _get_loads_on_span(self, span_start: float, span_end: float) -> list:
         """
         Get all loads that affect a specific span.
         
@@ -68,7 +55,7 @@ class ReactionSolver:
             span_end: End position of the span
             
         Returns:
-            List of loads that overlap with the span
+            list of loads that overlap with the span
         """
         span_loads = []
         
@@ -183,14 +170,14 @@ class ReactionSolver:
                     
         return total_moment
     
-    def calculate_support_reactions(self) -> Dict[float, float]:
+    def calculate_support_reactions(self) -> dict[float, float]:
         """
         Calculate all support reactions using equilibrium equations.
         
         For single span systems, uses simple statics with zero moments.
         
         Returns:
-            Dictionary mapping support position to reaction force
+            dictionary mapping support position to reaction force
         """
         if self.is_single_span:
             # For single span, use simple statics
@@ -241,12 +228,12 @@ class ReactionSolver:
             
         return reactions
     
-    def _calculate_single_span_reactions(self) -> Dict[float, float]:
+    def _calculate_single_span_reactions(self) -> dict[float, float]:
         """
         Calculate reactions for a single span system using simple statics.
         
         Returns:
-            Dictionary mapping support position to reaction force
+            dictionary mapping support position to reaction force
         """
         if len(self.support_positions) != 2:
             raise ValueError("Single span reactions can only be calculated for 2 supports")
@@ -280,12 +267,12 @@ class ReactionSolver:
         
         return reactions
     
-    def get_reaction_details(self) -> Dict:
+    def get_reaction_details(self) -> dict:
         """
         Get detailed information about reaction calculations for debugging.
         
         Returns:
-            Dictionary containing detailed calculation information
+            dictionary containing detailed calculation information
         """
         if self.is_single_span:
             return self._get_single_span_reaction_details()
@@ -318,12 +305,12 @@ class ReactionSolver:
             
         return details
     
-    def _get_single_span_reaction_details(self) -> Dict:
+    def _get_single_span_reaction_details(self) -> dict:
         """
         Get detailed information about single span reaction calculations.
         
         Returns:
-            Dictionary containing detailed calculation information
+            dictionary containing detailed calculation information
         """
         span_start, span_end = self.support_positions[0], self.support_positions[1]
         span_length = span_end - span_start
