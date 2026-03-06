@@ -44,5 +44,8 @@ Repository = "https://github.com/yourusername/LoadCalculator"
 Documentation = "https://github.com/yourusername/LoadCalculator#readme"
 Issues = "https://github.com/yourusername/LoadCalculator/issues"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/loadcalculator"]
