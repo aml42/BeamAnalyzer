@@ -6,6 +6,7 @@ from .systembuilder import SystemBuilder
 from .systemsolver import SystemSolver
 from .reactionsolver import ReactionSolver
 from .loads import UniformLoad, TriangularLoad
+from .units import ShearUnit, MomentUnit
 
 
 class BeamPlotter:
@@ -234,12 +235,21 @@ class BeamPlotter:
     # Plotting interface
     # ------------------------------------------------------------------
 
-    def plot_shear(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:
-        """Plot the shear-force diagram and return the Matplotlib ``Axes``."""
+    def plot_shear(self, ax: plt.Axes | None = None, unit: ShearUnit = ShearUnit.N, **kwargs) -> plt.Axes:
+        """Plot the shear-force diagram and return the Matplotlib ``Axes``.
+
+        Parameters
+        ----------
+        ax : plt.Axes | None
+            Axes to plot on. If *None*, a new figure is created.
+        unit : ShearUnit, default ShearUnit.N
+            Y-axis unit.
+        """
         self._ensure_fields()
+
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
-        
+
         # Default styling
         default_kwargs = {
             'color': 'blue',
@@ -247,28 +257,37 @@ class BeamPlotter:
             'label': 'Shear Force'
         }
         default_kwargs.update(kwargs)
-        
+
         self._add_span_background(ax)
-        ax.plot(self._x, self._shear, **default_kwargs)
+        ax.plot(self._x, self._shear * unit.scale, **default_kwargs)
         ax.set_title("Shear Force Diagram")
         ax.set_xlabel("Position [m]")
-        ax.set_ylabel("Shear V(x) [N]")
+        ax.set_ylabel(f"Shear V(x) [{unit.label}]")
         ax.axhline(0, color="black", linewidth=0.8, alpha=0.3)
         ax.grid(True, alpha=0.3)
         ax.legend()
-        
+
         # Add span and support labels after plot is drawn
         self._add_span_labels(ax)
         self._add_support_labels(ax)
-        
+
         return ax
 
-    def plot_moment(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:
-        """Plot the bending-moment diagram and return the Matplotlib ``Axes``."""
+    def plot_moment(self, ax: plt.Axes | None = None, unit: MomentUnit = MomentUnit.Nm, **kwargs) -> plt.Axes:
+        """Plot the bending-moment diagram and return the Matplotlib ``Axes``.
+
+        Parameters
+        ----------
+        ax : plt.Axes | None
+            Axes to plot on. If *None*, a new figure is created.
+        unit : MomentUnit, default MomentUnit.Nm
+            Y-axis unit.
+        """
         self._ensure_fields()
+
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
-        
+
         # Default styling
         default_kwargs = {
             'color': 'green',
@@ -276,20 +295,20 @@ class BeamPlotter:
             'label': 'Bending Moment'
         }
         default_kwargs.update(kwargs)
-        
+
         self._add_span_background(ax)
-        ax.plot(self._x, self._moment, **default_kwargs)
+        ax.plot(self._x, self._moment * unit.scale, **default_kwargs)
         ax.set_title("Bending Moment Diagram")
         ax.set_xlabel("Position [m]")
-        ax.set_ylabel("Moment M(x) [N·m]")
+        ax.set_ylabel(f"Moment M(x) [{unit.label}]")
         ax.axhline(0, color="black", linewidth=0.8, alpha=0.3)
         ax.grid(True, alpha=0.3)
         ax.legend()
-        
+
         # Add span and support labels after plot is drawn
         self._add_span_labels(ax)
         self._add_support_labels(ax)
-        
+
         return ax
 
     def plot_all(self, figsize=(10, 6)) -> tuple[plt.Figure, tuple[plt.Axes, plt.Axes]]:

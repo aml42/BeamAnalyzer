@@ -35,7 +35,7 @@ def example_single_span():
     print(f"Max deflection per span: {results['max_deflection_per_span']}")
     
     # Plot diagrams
-    fig, (ax1, ax2, ax3) = analyzer.plot_all_diagrams()
+    analyzer.plot_all_diagrams(moment_unit="kNm", shear_unit="kN", deflection_unit="mm")
     plt.show()
 
 

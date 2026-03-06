@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 
 from .plotter import BeamPlotter
+from .units import DeflectionUnit
 
 
 class DeflectionCalculator:
@@ -153,17 +154,19 @@ class DeflectionCalculator:
         
         return max_deflection, x_position
     
-    def plot_deflection(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:
+    def plot_deflection(self, ax: plt.Axes | None = None, unit: DeflectionUnit = DeflectionUnit.m, **kwargs) -> plt.Axes:
         """
         Plot the deflection diagram.
-        
+
         Parameters
         ----------
         ax : plt.Axes, optional
             Matplotlib axes to plot on. If None, creates a new figure.
+        unit : DeflectionUnit, default DeflectionUnit.m
+            Y-axis unit.
         **kwargs
             Additional keyword arguments passed to plt.plot().
-            
+
         Returns
         -------
         plt.Axes
@@ -171,10 +174,10 @@ class DeflectionCalculator:
         """
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
-        
+
         deflection = self.deflection
         x = self.x_coordinates
-        
+
         # Default styling
         default_kwargs = {
             'color': 'red',
@@ -182,17 +185,17 @@ class DeflectionCalculator:
             'label': 'Deflection'
         }
         default_kwargs.update(kwargs)
-        
-        ax.plot(x, deflection, **default_kwargs)
+
+        ax.plot(x, deflection * unit.scale, **default_kwargs)
         ax.set_xlabel('Position [m]')
-        ax.set_ylabel('Deflection [m]')
+        ax.set_ylabel(f'Deflection [{unit.label}]')
         ax.set_title('Beam Deflection Diagram')
         ax.grid(True, alpha=0.3)
         ax.legend()
-        
+
         # Add span background
         self.beam_plotter._add_span_background(ax)
-        
+
         return ax
     
     def plot_slope(self, ax: plt.Axes | None = None, **kwargs) -> plt.Axes:

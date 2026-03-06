@@ -5,6 +5,10 @@ from .systemsolver import SystemSolver
 from .reactionsolver import ReactionSolver
 from .plotter import BeamPlotter
 from .deflection_calculator import DeflectionCalculator
+from .units import (
+    ShearUnit, MomentUnit, DeflectionUnit,
+    LengthUnit, ForcePerLengthUnit, PressureUnit, InertiaUnit,
+)
 from .beam_analyzer import BeamAnalyzer
 
 __all__ = [
@@ -16,6 +20,13 @@ __all__ = [
     'ReactionSolver',
     'BeamPlotter',
     'DeflectionCalculator',
+    'ShearUnit',
+    'MomentUnit',
+    'DeflectionUnit',
+    'LengthUnit',
+    'ForcePerLengthUnit',
+    'PressureUnit',
+    'InertiaUnit',
     'BeamAnalyzer'
 ]
 
