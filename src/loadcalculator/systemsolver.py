@@ -25,7 +25,7 @@ class SystemSolver:
     def __init__(self, system_builder: SystemBuilder):
         """
         Initialize the SystemSolver with a SystemBuilder instance.
-        
+
         Args:
             system_builder: SystemBuilder instance containing loads and supports
         """
@@ -34,7 +34,10 @@ class SystemSolver:
         self.subsystems = system_builder._create_subsystems()
         self.subsystem_components = system_builder.calculate_subsystem_components()
         self.is_single_span = system_builder.is_single_span
-        
+
+        # Known end-support moments from cantilever statics (zero when no overhang).
+        self.M_left_end, self.M_right_end = system_builder.compute_end_moments()
+
         # Number of internal supports (excluding end supports)
         self.num_internal_supports = len(self.support_positions) - 2
         self.num_equations = len(self.subsystems)
@@ -102,52 +105,66 @@ class SystemSolver:
             return np.array([])
             
         load_vector = np.zeros(self.num_equations)
-        
+
         for i, subsystem in enumerate(self.subsystems):
             components = self.subsystem_components[subsystem]
+            left_span, right_span = subsystem
+            L1 = self._get_span_length(left_span)
+            L2 = self._get_span_length(right_span)
             # The load components are negative in the equation (moved to right side)
             load_vector[i] = -(components['left_component'] + components['right_component'])
-            
+
+            # If a subsystem touches an end support, that end moment is *known*
+            # (cantilever value) and its M·L term moves from LHS to RHS.
+            if left_span[0] == self.support_positions[0]:
+                load_vector[i] -= self.M_left_end * L1
+            if right_span[1] == self.support_positions[-1]:
+                load_vector[i] -= self.M_right_end * L2
+
         return load_vector
     
     def solve_moments(self) -> dict[float, float]:
         """
         Solve the three-moment equation system to find internal support moments.
-        
-        For single span systems, all moments are zero (simply supported).
-        
+
+        For genuinely simply-supported beams the end moments are zero. When
+        cantilever overhangs exist, end moments are *known* values from
+        cantilever statics (computed by SystemBuilder) and are returned here
+        unchanged; only internal-support moments are solved for.
+
         Returns:
             dictionary mapping support position to moment value
         """
-        if self.is_single_span:
-            # For single span, all moments are zero (simply supported)
-            result = {}
-            for pos in self.support_positions:
-                result[pos] = 0.0
-            return result
-        
+        if self.num_internal_supports == 0:
+            # Two-support beam (with or without overhang). Nothing to solve;
+            # end moments come from cantilever statics (zero for plain simple span).
+            return {
+                self.support_positions[0]: float(self.M_left_end),
+                self.support_positions[-1]: float(self.M_right_end),
+            }
+
         # Build the equation system: A * M = b
         coeff_matrix = self._build_coefficient_matrix()
         load_vector = self._build_load_vector()
-        
+
         # Solve the linear system
         try:
             moment_values = np.linalg.solve(coeff_matrix, load_vector)
         except np.linalg.LinAlgError as e:
             raise ValueError(f"Could not solve the moment equation system: {e}")
-        
+
         # Create result dictionary mapping support positions to moments
         internal_support_positions = self.support_positions[1:-1]
-        result = {}
-        
-        # End supports always have zero moment (simply supported)
-        result[self.support_positions[0]] = 0.0
-        result[self.support_positions[-1]] = 0.0
-        
+        result: dict[float, float] = {}
+
+        # End-support moments are known from cantilever statics (zero when no overhang).
+        result[self.support_positions[0]] = float(self.M_left_end)
+        result[self.support_positions[-1]] = float(self.M_right_end)
+
         # Internal supports have calculated moments
         for i, support_pos in enumerate(internal_support_positions):
-            result[support_pos] = moment_values[i]
-            
+            result[support_pos] = float(moment_values[i])
+
         return result
     
     def get_equation_system_info(self) -> dict:

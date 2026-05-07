@@ -77,15 +77,15 @@ class DeflectionCalculator:
         for i in range(len(support_positions) - 1):
             start_pos = support_positions[i]
             end_pos = support_positions[i + 1]
-            
+
             # Find indices for this span
             span_mask = (x >= start_pos) & (x <= end_pos)
             span_x = x[span_mask]
             span_m_over_ei = m_over_ei[span_mask]
-            
+
             if span_x.size < 2:
                 continue
-                
+
             # First integration: slope = ∫(M/(EI))dx
             # Use cumulative trapezoidal integration
             dx = np.diff(span_x)
@@ -93,11 +93,11 @@ class DeflectionCalculator:
                 # Calculate slope using trapezoidal integration
                 slope_increments = (span_m_over_ei[:-1] + span_m_over_ei[1:]) / 2 * dx
                 span_slope = np.concatenate([[0], np.cumsum(slope_increments)])
-                
+
                 # Second integration: deflection = ∫slope dx
                 deflection_increments = (span_slope[:-1] + span_slope[1:]) / 2 * dx
                 span_deflection = np.concatenate([[0], np.cumsum(deflection_increments)])
-                
+
                 # Apply boundary conditions: deflection = 0 at supports
                 # Linear correction to ensure deflection = 0 at end support
                 if span_deflection.size > 1:
@@ -106,15 +106,57 @@ class DeflectionCalculator:
                     # Apply linear correction across the span
                     correction_ramp = np.linspace(0, -end_deflection, span_deflection.size)
                     span_deflection += correction_ramp
-                    
+
                     # Also correct slope to maintain consistency
                     slope_correction = -end_deflection / (end_pos - start_pos)
                     slope_ramp = np.linspace(0, slope_correction, span_slope.size)
                     span_slope += slope_ramp
-                
+
                 # Store results
                 self._slope[span_mask] = span_slope
                 self._deflection[span_mask] = span_deflection
+
+        # Cantilever overhangs: inherit slope from the adjacent inner span and
+        # anchor deflection to zero at the end support. Free ends are unrestrained.
+        builder = self.beam_plotter.builder
+        first_support = support_positions[0]
+        last_support = support_positions[-1]
+
+        if getattr(builder, "has_left_overhang", False):
+            beam_left = builder.beam_left
+            mask = (x >= beam_left) & (x <= first_support)
+            seg_x = x[mask]
+            seg_m = m_over_ei[mask]
+            if seg_x.size >= 2:
+                dxs = np.diff(seg_x)
+                slope_inc = (seg_m[:-1] + seg_m[1:]) / 2 * dxs
+                raw_slope = np.concatenate([[0.0], np.cumsum(slope_inc)])
+                # Match slope continuity at the inner support
+                slope_at_first = float(self._slope[np.argmin(np.abs(x - first_support))])
+                seg_slope = raw_slope + (slope_at_first - raw_slope[-1])
+                defl_inc = (seg_slope[:-1] + seg_slope[1:]) / 2 * dxs
+                raw_defl = np.concatenate([[0.0], np.cumsum(defl_inc)])
+                # Anchor deflection = 0 at the inner support (right end of segment)
+                seg_defl = raw_defl + (0.0 - raw_defl[-1])
+                self._slope[mask] = seg_slope
+                self._deflection[mask] = seg_defl
+
+        if getattr(builder, "has_right_overhang", False):
+            beam_right = builder.beam_right
+            mask = (x >= last_support) & (x <= beam_right)
+            seg_x = x[mask]
+            seg_m = m_over_ei[mask]
+            if seg_x.size >= 2:
+                dxs = np.diff(seg_x)
+                slope_inc = (seg_m[:-1] + seg_m[1:]) / 2 * dxs
+                raw_slope = np.concatenate([[0.0], np.cumsum(slope_inc)])
+                slope_at_last = float(self._slope[np.argmin(np.abs(x - last_support))])
+                seg_slope = raw_slope + slope_at_last
+                defl_inc = (seg_slope[:-1] + seg_slope[1:]) / 2 * dxs
+                # Deflection starts at 0 (inner support boundary) and integrates outward
+                seg_defl = np.concatenate([[0.0], np.cumsum(defl_inc)])
+                self._slope[mask] = seg_slope
+                self._deflection[mask] = seg_defl
     
     @property
     def deflection(self) -> np.ndarray:

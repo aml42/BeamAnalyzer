@@ -77,16 +77,27 @@ class BeamAnalyzer:
         load_scale = load_unit.to_si
 
         self.support_positions = [p * pos_scale for p in support_positions]
-        self.loads = self._convert_loads(loads, pos_scale, load_scale)
+        si_loads = self._convert_loads(loads, pos_scale, load_scale)
+        # Split any load that straddles an end support so each load lies fully
+        # in either the left overhang, the main beam, or the right overhang.
+        first_support = self.support_positions[0]
+        last_support = self.support_positions[-1]
+        si_loads = self._split_loads_at(si_loads, first_support)
+        si_loads = self._split_loads_at(si_loads, last_support)
+        self.loads = si_loads
+        # Detect cantilever extent from the (split) load positions
+        self.beam_left = min([first_support] + [ld.start for ld in self.loads])
+        self.beam_right = max([last_support] + [ld.end for ld in self.loads])
+
         self.inertia = inertia * inertia_unit.to_si if inertia is not None else None
         self.e_modulus = e_modulus * e_modulus_unit.to_si
         self.num_points = num_points
         self.shear_unit = shear_unit
         self.moment_unit = moment_unit
         self.deflection_unit = deflection_unit
-        
-        # Create support objects
-        self.supports = [Support(pos) for pos in support_positions]
+
+        # Create support objects (in SI coordinates)
+        self.supports = [Support(pos) for pos in self.support_positions]
         
         # Initialize components
         self._system_builder = None
@@ -120,10 +131,34 @@ class BeamAnalyzer:
                 raise ValueError(f"Unsupported load type: {type(load)}")
         return converted
 
+    @staticmethod
+    def _split_loads_at(loads: list, position: float) -> list:
+        """Split any load that strictly straddles ``position``.
+
+        ``Load.split_at`` returns ``(left_pieces, right_pieces)`` lists because
+        a triangular load split generally yields trapezoidal pieces that must
+        be decomposed into a UniformLoad + TriangularLoad. Loads that lie
+        entirely on one side pass through unchanged.
+        """
+        out = []
+        for load in loads:
+            if load.start < position < load.end:
+                left_pieces, right_pieces = load.split_at(position)
+                out.extend(left_pieces)
+                out.extend(right_pieces)
+            else:
+                out.append(load)
+        return out
+
     def _initialize_components(self):
         """Initialize all analysis components."""
         if self._system_builder is None:
-            self._system_builder = SystemBuilder(self.loads, self.supports)
+            self._system_builder = SystemBuilder(
+                self.loads,
+                self.supports,
+                beam_left=self.beam_left,
+                beam_right=self.beam_right,
+            )
             self._system_solver = SystemSolver(self._system_builder)
             self._reaction_solver = ReactionSolver(self._system_builder, self._system_solver)
             self._beam_plotter = BeamPlotter(
@@ -177,13 +212,68 @@ class BeamAnalyzer:
             'max_shear_per_span': max_shear_per_span,
         }
 
+        # Cantilever extrema (additive — keys absent when no overhang)
+        if self.beam_left < self.support_positions[0]:
+            results['max_moment_cantilever_left'] = self._get_cantilever_extreme('moment', 'left')
+            results['max_shear_cantilever_left'] = self._get_cantilever_extreme('shear', 'left')
+        if self.beam_right > self.support_positions[-1]:
+            results['max_moment_cantilever_right'] = self._get_cantilever_extreme('moment', 'right')
+            results['max_shear_cantilever_right'] = self._get_cantilever_extreme('shear', 'right')
+
         # Add deflection results if inertia is provided
         if self.inertia is not None:
             max_deflection_per_span = self._get_max_deflection_per_span()
             results['max_deflection_per_span'] = max_deflection_per_span
+            if self.beam_left < self.support_positions[0]:
+                results['max_deflection_cantilever_left'] = self._get_cantilever_extreme('deflection', 'left')
+            if self.beam_right > self.support_positions[-1]:
+                results['max_deflection_cantilever_right'] = self._get_cantilever_extreme('deflection', 'right')
 
         self._analysis_results = results
         return results
+
+    def _get_cantilever_extreme(self, field: str, side: str) -> dict:
+        """Return the absolute-max value of ``field`` ('moment'|'shear'|'deflection')
+        on the left or right cantilever overhang, scaled to the configured unit.
+        """
+        self._beam_plotter._ensure_fields()
+        x = self._beam_plotter._x
+        if field == 'moment':
+            arr = self._beam_plotter._moment
+            scale = self.moment_unit.scale
+        elif field == 'shear':
+            arr = self._beam_plotter._shear
+            scale = self.shear_unit.scale
+        elif field == 'deflection':
+            x = self._deflection_calculator.x_coordinates
+            arr = self._deflection_calculator.deflection
+            scale = self.deflection_unit.scale
+        else:
+            raise ValueError(f"Unknown field: {field}")
+
+        if side == 'left':
+            mask = (x >= self.beam_left) & (x <= self.support_positions[0])
+            seg_start = self.beam_left
+            seg_end = self.support_positions[0]
+        elif side == 'right':
+            mask = (x >= self.support_positions[-1]) & (x <= self.beam_right)
+            seg_start = self.support_positions[-1]
+            seg_end = self.beam_right
+        else:
+            raise ValueError(f"Unknown side: {side}")
+
+        seg_x = x[mask]
+        seg_arr = arr[mask]
+        if seg_arr.size == 0:
+            return {'segment_start': seg_start, 'segment_end': seg_end,
+                    f'max_{field}': 0.0, f'max_{field}_position': float(seg_start)}
+        idx = np.argmax(np.abs(seg_arr))
+        return {
+            'segment_start': float(seg_start),
+            'segment_end': float(seg_end),
+            f'max_{field}': float(seg_arr[idx]) * scale,
+            f'max_{field}_position': float(seg_x[idx]),
+        }
     
     def _get_max_moments_per_span(self) -> list[dict]:
         """Calculate maximum moments in each span with their positions."""

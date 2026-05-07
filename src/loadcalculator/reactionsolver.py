@@ -1,3 +1,5 @@
+from scipy.integrate import quad  # type: ignore
+
 from .systembuilder import SystemBuilder
 from .systemsolver import SystemSolver
 from .loads import TriangularLoad, UniformLoad
@@ -173,59 +175,56 @@ class ReactionSolver:
     def calculate_support_reactions(self) -> dict[float, float]:
         """
         Calculate all support reactions using equilibrium equations.
-        
-        For single span systems, uses simple statics with zero moments.
-        
+
+        Plain simple-span beams (2 supports, no overhang) use fast simple
+        statics. All other cases (multi-span and/or cantilevered) use
+        per-span equilibrium with the support moments from SystemSolver, then
+        add overhang vertical loads directly to the adjacent end supports.
+
         Returns:
             dictionary mapping support position to reaction force
         """
-        if self.is_single_span:
-            # For single span, use simple statics
+        if self.is_single_span and not self.system_builder.has_overhang:
             return self._calculate_single_span_reactions()
-        
+
         num_spans = len(self.support_positions) - 1
-        reactions = {}
-        
-        # Initialize all reactions to zero
-        for pos in self.support_positions:
-            reactions[pos] = 0.0
-        
-        # Calculate reactions for each span
+        reactions = {pos: 0.0 for pos in self.support_positions}
+
+        # Inner-span equilibrium (overhang loads excluded automatically by the
+        # span overlap check — they lie outside [supports[0], supports[-1]]).
         for span_idx in range(num_spans):
             span_start, span_end, span_length = self._get_span_info(span_idx)
-            
-            # Get moments at span ends
+
             moment_at_start = self.support_moments[span_start]
             moment_at_end = self.support_moments[span_end]
-            
-            # Calculate total load on span
+
             total_load = self._calculate_total_load_on_span(span_start, span_end)
-            
-            # Calculate moment about end support to find reaction at start support
             moment_about_end = self._calculate_moment_from_loads_about_point(
                 span_start, span_end, span_end)
-            
-            # Equilibrium of moments about end support:
-            # R_start * span_length + moment_at_start - moment_at_end = moment_about_end
-            # R_start = (moment_about_end - moment_at_start + moment_at_end) / span_length
+
             if span_length > 0:
                 reaction_at_start = (-moment_about_end - moment_at_start + moment_at_end) / span_length
             else:
                 reaction_at_start = 0.0
-            
-            # Calculate reaction at end support using vertical equilibrium
-            # R_start + R_end = total_load
             reaction_at_end = total_load - reaction_at_start
-            
-            # Add contributions to total reactions (for internal supports, 
-            # reactions from adjacent spans will be summed)
+
             reactions[span_start] += reaction_at_start
             reactions[span_end] += reaction_at_end
-        
-        # Convert numpy floats to regular floats for cleaner output
+
+        # Cantilever overhang loads pass entirely through the adjacent end support.
+        left_overhang, right_overhang = self.system_builder.overhang_loads()
+        first_support = self.support_positions[0]
+        last_support = self.support_positions[-1]
+        for ld in left_overhang:
+            w_total = quad(ld.load_function, ld.start, ld.end)[0]
+            reactions[first_support] += w_total
+        for ld in right_overhang:
+            w_total = quad(ld.load_function, ld.start, ld.end)[0]
+            reactions[last_support] += w_total
+
         for pos in reactions:
             reactions[pos] = float(reactions[pos])
-            
+
         return reactions
     
     def _calculate_single_span_reactions(self) -> dict[float, float]:

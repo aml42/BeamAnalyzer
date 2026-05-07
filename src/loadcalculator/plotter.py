@@ -94,8 +94,8 @@ class BeamPlotter:
         if self._shear is not None and self._moment is not None:
             return  # Already computed
 
-        x0 = self.support_positions[0]
-        xL = self.support_positions[-1]
+        x0 = self.builder.beam_left
+        xL = self.builder.beam_right
         self._x = np.linspace(x0, xL, self.num_points)
 
         # Vectorised distributed load
@@ -129,35 +129,38 @@ class BeamPlotter:
         # ------------------------------------------------------------------
 
         moment = np.zeros_like(self._shear)
-        span_indices = list(range(len(self.support_positions) - 1))
 
-        for idx in span_indices:
+        # Build the list of integration segments. Inter-support spans use
+        # support moments at both ends. Cantilever overhangs anchor the free
+        # end at zero moment.
+        segments: list[tuple[float, float, float, float]] = []
+        if self.builder.has_left_overhang:
+            a = self.builder.beam_left
+            b = self.support_positions[0]
+            segments.append((a, b, 0.0, self._moments.get(b, 0.0)))
+        for idx in range(len(self.support_positions) - 1):
             a = self.support_positions[idx]
             b = self.support_positions[idx + 1]
+            segments.append((a, b, self._moments.get(a, 0.0), self._moments.get(b, 0.0)))
+        if self.builder.has_right_overhang:
+            a = self.support_positions[-1]
+            b = self.builder.beam_right
+            segments.append((a, b, self._moments.get(a, 0.0), 0.0))
 
-            # indices belonging to current span
+        for a, b, M0, M_end_expected in segments:
             span_mask = (self._x >= a) & (self._x <= b)
             span_x = self._x[span_mask]
             span_shear = self._shear[span_mask]
 
-            # Starting moment at left support (provided by SystemSolver)
-            M0 = self._moments.get(a, 0.0)
-            M_end_expected = self._moments.get(b, 0.0)
-
-            # Cumulative integrate via trapezoidal rule inside the span
             if span_x.size > 1:
                 dxi = np.diff(span_x)
-                # cumulative trapezoidal integration
                 dMi = (span_shear[:-1] + span_shear[1:]) / 2 * dxi
                 span_moment = np.concatenate([[M0], np.cumsum(dMi) + M0])
             else:
                 span_moment = np.array([M0])
 
-            # Apply linear correction so that moment at right support matches
-            # the value obtained from the analytical SystemSolver.
             if span_moment.size > 1:
                 correction = M_end_expected - span_moment[-1]
-                # Linear ramp 0 -> correction across the span length
                 ramp = np.linspace(0.0, correction, span_moment.size)
                 span_moment += ramp
 
