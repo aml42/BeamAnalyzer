@@ -4,6 +4,7 @@ Each case has a closed-form solution from elementary statics; results are
 asserted against those values. Sign convention: sagging positive, upward
 reactions positive, downward loads positive.
 """
+import numpy as np
 import pytest
 
 from loadcalculator import (
@@ -177,6 +178,40 @@ def test_triangular_straddling_endpoints():
 # δ_tip = -w·c³·(c + L) / (24·E·I)  (Roark, downward).
 # We use a coarse tolerance because the integration is numerical.
 # ---------------------------------------------------------------------------
+
+def test_overhang_slope_continuity():
+    """The deflection curve must have no kinks at cantilever-adjacent supports.
+
+    Verified by computing the central-difference numerical slope on the
+    grid points immediately flanking each end support and asserting they
+    agree to tight tolerance.
+    """
+    L, c, w = 10.0, 2.0, 10.0
+    analyzer = BeamAnalyzer(
+        support_positions=[0.0, L],
+        loads=[UniformLoad(magnitude=w, start=-c, end=L + c)],  # both overhangs loaded
+        e_modulus=2.1e11,
+        inertia=138e-8,
+        num_points=4000,
+    )
+    analyzer.analyze()
+    x_arr, defl = analyzer.get_deflection_values()
+
+    def _slope_around(x_target):
+        idx = int(np.argmin(np.abs(x_arr - x_target)))
+        # central differences just left and just right of the support
+        slope_left = (defl[idx] - defl[idx - 2]) / (x_arr[idx] - x_arr[idx - 2])
+        slope_right = (defl[idx + 2] - defl[idx]) / (x_arr[idx + 2] - x_arr[idx])
+        return slope_left, slope_right
+
+    for support in (0.0, L):
+        sl, sr = _slope_around(support)
+        # Slopes are O(1e-4) rad in magnitude for this beam; assert mismatch is
+        # an order of magnitude tighter than that.
+        assert abs(sl - sr) < 1e-6, (
+            f"Slope discontinuity at support x={support}: left={sl}, right={sr}"
+        )
+
 
 def test_overhang_tip_deflection_textbook():
     L, c, w = 10.0, 2.0, 10.0
