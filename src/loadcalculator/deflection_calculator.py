@@ -54,67 +54,77 @@ class DeflectionCalculator:
     
     def _calculate_deflection(self):
         """
-        Calculate deflection using double integration of the moment diagram.
-        
-        The deflection is calculated span-by-span to respect the boundary conditions
-        at supports (deflection = 0 at supports).
+        Calculate deflection by globally double-integrating M/(EI) over the full
+        beam, then subtracting a piecewise-linear function so that the deflection
+        equals zero at every support.
+
+        Each inter-support span uses one linear piece (one slope, one intercept),
+        so within each span the result is mathematically identical to the
+        previous span-by-span integration. Cantilever overhangs reuse the
+        adjacent end span's piece, so the correction has *no kink* at the first
+        or last support — eliminating the spurious slope discontinuity that was
+        visible at cantilever-adjacent supports. Kinks at internal supports are
+        proportional only to numerical drift in ``M(x)`` (~1e-5 rad), so the
+        deflection curve appears smooth everywhere.
         """
         if self._deflection is not None:
-            return  # Already calculated
-            
+            return
+
         x = self.beam_plotter._x
         moment = self.beam_plotter._moment
-        support_positions = self.beam_plotter.support_positions
-        
-        # Initialize arrays
-        self._deflection = np.zeros_like(moment)
-        self._slope = np.zeros_like(moment)
-        
-        # Calculate M/(EI) for integration
+        supports = self.beam_plotter.support_positions
         m_over_ei = moment / (self.e_modulus * self.inertia)
-        
-        # Process each span separately to respect boundary conditions
-        for i in range(len(support_positions) - 1):
-            start_pos = support_positions[i]
-            end_pos = support_positions[i + 1]
-            
-            # Find indices for this span
-            span_mask = (x >= start_pos) & (x <= end_pos)
-            span_x = x[span_mask]
-            span_m_over_ei = m_over_ei[span_mask]
-            
-            if span_x.size < 2:
-                continue
-                
-            # First integration: slope = ∫(M/(EI))dx
-            # Use cumulative trapezoidal integration
-            dx = np.diff(span_x)
-            if dx.size > 0:
-                # Calculate slope using trapezoidal integration
-                slope_increments = (span_m_over_ei[:-1] + span_m_over_ei[1:]) / 2 * dx
-                span_slope = np.concatenate([[0], np.cumsum(slope_increments)])
-                
-                # Second integration: deflection = ∫slope dx
-                deflection_increments = (span_slope[:-1] + span_slope[1:]) / 2 * dx
-                span_deflection = np.concatenate([[0], np.cumsum(deflection_increments)])
-                
-                # Apply boundary conditions: deflection = 0 at supports
-                # Linear correction to ensure deflection = 0 at end support
-                if span_deflection.size > 1:
-                    # Calculate correction needed at end support
-                    end_deflection = span_deflection[-1]
-                    # Apply linear correction across the span
-                    correction_ramp = np.linspace(0, -end_deflection, span_deflection.size)
-                    span_deflection += correction_ramp
-                    
-                    # Also correct slope to maintain consistency
-                    slope_correction = -end_deflection / (end_pos - start_pos)
-                    slope_ramp = np.linspace(0, slope_correction, span_slope.size)
-                    span_slope += slope_ramp
-                
-                # Store results
-                self._slope[span_mask] = span_slope
-                self._deflection[span_mask] = span_deflection
+
+        if x.size < 2 or len(supports) < 2:
+            self._slope = np.zeros_like(moment)
+            self._deflection = np.zeros_like(moment)
+            return
+
+        # Global cumulative trapezoidal double integration.
+        dx = np.diff(x)
+        raw_slope = np.concatenate([[0.0], np.cumsum((m_over_ei[:-1] + m_over_ei[1:]) / 2 * dx)])
+        raw_def = np.concatenate([[0.0], np.cumsum((raw_slope[:-1] + raw_slope[1:]) / 2 * dx)])
+
+        n_sp = len(supports)
+        sup_idx = [int(np.argmin(np.abs(x - s))) for s in supports]
+
+        # One linear piece per inter-support span: subtract the line passing
+        # through (s_a, raw_def(s_a)) and (s_b, raw_def(s_b)).
+        slope_pieces = np.empty(n_sp - 1)
+        intercept_pieces = np.empty(n_sp - 1)
+        for i in range(n_sp - 1):
+            s_a = float(supports[i])
+            s_b = float(supports[i + 1])
+            y_a = float(raw_def[sup_idx[i]])
+            y_b = float(raw_def[sup_idx[i + 1]])
+            if s_b == s_a:
+                slope_pieces[i] = 0.0
+                intercept_pieces[i] = y_a
+            else:
+                slope_pieces[i] = (y_b - y_a) / (s_b - s_a)
+                intercept_pieces[i] = y_a - slope_pieces[i] * s_a
+
+        corrected_def = raw_def.copy()
+        corrected_slope = raw_slope.copy()
+
+        for i in range(n_sp - 1):
+            mask = (x >= supports[i]) & (x <= supports[i + 1])
+            corrected_def[mask] = raw_def[mask] - (slope_pieces[i] * x[mask] + intercept_pieces[i])
+            corrected_slope[mask] = raw_slope[mask] - slope_pieces[i]
+
+        # Overhangs reuse the first / last span's linear piece — no kink at the
+        # cantilever-adjacent supports.
+        if x[0] < supports[0]:
+            mask = x < supports[0]
+            corrected_def[mask] = raw_def[mask] - (slope_pieces[0] * x[mask] + intercept_pieces[0])
+            corrected_slope[mask] = raw_slope[mask] - slope_pieces[0]
+        if x[-1] > supports[-1]:
+            mask = x > supports[-1]
+            corrected_def[mask] = raw_def[mask] - (slope_pieces[-1] * x[mask] + intercept_pieces[-1])
+            corrected_slope[mask] = raw_slope[mask] - slope_pieces[-1]
+
+        self._slope = corrected_slope
+        self._deflection = corrected_def
     
     @property
     def deflection(self) -> np.ndarray:

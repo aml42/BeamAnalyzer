@@ -188,6 +188,45 @@ def example_complex_loading():
     plt.show()
 
 
+def example_cantilever_overhang():
+    """Example 6: Continuous beam with cantilever overhangs on both ends."""
+    print("\n=== Example 6: Continuous Beam with Cantilever Overhangs ===")
+
+    # Two interior supports at 2 m and 8 m. Beam extends from -1 m to +10 m
+    # (1 m left overhang, 2 m right overhang). Uniform load over the entire
+    # physical beam length plus an extra concentrated triangular load.
+    support_positions = [2.0, 5.0, 8.0]
+    loads = [
+        UniformLoad(magnitude=12e3, start=-1.0, end=10.0),                       # 12 kN/m full length
+        TriangularLoad(magnitude_start=0, magnitude_end=15e3, start=8.0, end=10.0),  # peak at right tip
+    ]
+
+    analyzer = BeamAnalyzer(
+        support_positions=support_positions,
+        loads=loads,
+        inertia=138e-8,
+        e_modulus=2.1e11,
+    )
+
+    results = analyzer.analyze()
+
+    print("Support reactions [N]:")
+    for pos, r in results['reactions'].items():
+        print(f"  R(x={pos:.2f} m) = {r:,.2f}")
+    print("Moments at supports [N·m]:")
+    for pos, m in results['moments_at_supports'].items():
+        print(f"  M(x={pos:.2f} m) = {m:,.2f}")
+    if 'max_moment_cantilever_left' in results:
+        info = results['max_moment_cantilever_left']
+        print(f"Left cantilever max |M| = {info['max_moment']:,.2f} Nm at x={info['max_moment_position']:.3f} m")
+    if 'max_moment_cantilever_right' in results:
+        info = results['max_moment_cantilever_right']
+        print(f"Right cantilever max |M| = {info['max_moment']:,.2f} Nm at x={info['max_moment_position']:.3f} m")
+
+    fig, _ = analyzer.plot_all_diagrams()
+    return fig
+
+
 if __name__ == "__main__":
     # Run all examples
     example_single_span()
@@ -195,3 +234,4 @@ if __name__ == "__main__":
     example_get_values()
     # example_save_plots()
     example_complex_loading()
+    example_cantilever_overhang()

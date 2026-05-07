@@ -1,18 +1,71 @@
+from scipy.integrate import quad  # type: ignore
+
 from .loads import TriangularLoad, UniformLoad
 from .supports import Support
 
 
 
 class SystemBuilder:
-    def __init__(self, loads: list[UniformLoad | TriangularLoad], supports: list[Support]):
+    def __init__(
+        self,
+        loads: list[UniformLoad | TriangularLoad],
+        supports: list[Support],
+        beam_left: float | None = None,
+        beam_right: float | None = None,
+    ):
         self.loads = loads
 
         if len(supports) < 2:
             raise ValueError("A system must have at least 2 supports")
-        
-        self.support_positions: tuple[float] = tuple(sorted([support.position for support in supports]))
+
+        self.support_positions: tuple[float, ...] = tuple(sorted([support.position for support in supports]))
         self.is_single_span = len(supports) == 2
+
+        # Beam physical extent (may exceed inter-support span when cantilevers exist).
+        first_support = self.support_positions[0]
+        last_support = self.support_positions[-1]
+        self.beam_left = first_support if beam_left is None else min(beam_left, first_support)
+        self.beam_right = last_support if beam_right is None else max(beam_right, last_support)
+        self.has_left_overhang = self.beam_left < first_support
+        self.has_right_overhang = self.beam_right > last_support
+        self.has_overhang = self.has_left_overhang or self.has_right_overhang
         
+    def compute_end_moments(self) -> tuple[float, float]:
+        """Compute the bending moments at the end supports caused by overhang
+        loads (cantilever statics). Returns ``(M_left_end, M_right_end)``.
+
+        Sign convention matches the rest of the package: sagging is positive,
+        so a downward load on a cantilever produces a *negative* (hogging)
+        moment at the adjacent end support.
+
+        Loads must already be pre-split at the end-support positions — i.e.
+        each load lies fully inside one of: left overhang, main beam, right
+        overhang. ``BeamAnalyzer`` performs this split before constructing
+        the SystemBuilder.
+        """
+        a_left = self.support_positions[0]
+        a_right = self.support_positions[-1]
+        m_left = 0.0
+        m_right = 0.0
+        for load in self.loads:
+            if load.end <= a_left:
+                # entirely on left overhang
+                integrand = lambda x, ld=load: ld.load_function(x) * (a_left - x)
+                m_left += -quad(integrand, load.start, load.end)[0]
+            elif load.start >= a_right:
+                # entirely on right overhang
+                integrand = lambda x, ld=load: ld.load_function(x) * (x - a_right)
+                m_right += -quad(integrand, load.start, load.end)[0]
+        return m_left, m_right
+
+    def overhang_loads(self) -> tuple[list, list]:
+        """Return ``(left_overhang_loads, right_overhang_loads)`` after split."""
+        a_left = self.support_positions[0]
+        a_right = self.support_positions[-1]
+        left = [ld for ld in self.loads if ld.end <= a_left]
+        right = [ld for ld in self.loads if ld.start >= a_right]
+        return left, right
+
     def _create_subsystems(self):
         if self.is_single_span:
             # For single span, there are no subsystems (no internal supports)
